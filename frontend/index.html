@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RepoGen - S7 Communication Tool</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1>RepoGen S7 Communication Tool <span style="font-size: 0.55em; opacity: 0.7; font-weight: normal; margin-left: 8px;">v1.0.6 [DIAG_READ_CPU_006]</span></h1>
+            <div id="connection-indicator" class="status-badge disconnected">DISCONNECTED</div>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab-btn active" data-target="tab-connection">Connection</button>
+            <button class="tab-btn" data-target="tab-tags">Tag Tables</button>
+        </nav>
+
+        <main class="app-main">
+            <!-- Connection Tab -->
+            <div id="tab-connection" class="tab-content active">
+                <section class="panel config-panel">
+                    <h2>S7 PLC Connection</h2>
+                    <div class="form-group">
+                        <label for="ip-address">IP Address</label>
+                        <input type="text" id="ip-address" value="192.168.0.1" placeholder="192.168.0.1">
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group half">
+                            <label for="rack">Rack</label>
+                            <input type="number" id="rack" value="0" min="0">
+                        </div>
+                        <div class="form-group half">
+                            <label for="slot">Slot</label>
+                            <input type="number" id="slot" value="1" min="0">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="port">TCP Port</label>
+                        <input type="number" id="port" value="102" min="1">
+                    </div>
+
+                    <div class="button-group">
+                        <button id="btn-ping" class="btn secondary">PING PLC</button>
+                        <button id="btn-test-s7" class="btn secondary">TEST S7 COMMUNICATION</button>
+                    </div>
+                    
+                    <div class="button-group main-actions">
+                        <button id="btn-connect" class="btn primary">CONNECT</button>
+                        <button id="btn-disconnect" class="btn danger" disabled>DISCONNECT</button>
+                        <button id="btn-reconnect" class="btn warning" disabled>RECONNECT</button>
+                    </div>
+                </section>
+
+                <section class="panel status-panel">
+                    <h2>Connection Status</h2>
+                    <div class="status-grid">
+                        <div class="status-item">
+                            <span class="label">S7 State:</span>
+                            <span id="s7-state" class="value">DISCONNECTED</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="label">CPU State:</span>
+                            <span id="cpu-state" class="value">UNKNOWN</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="label">Network Ping:</span>
+                            <span id="ping-state" class="value">NOT TESTED</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="label">S7 Test:</span>
+                            <span id="s7-test-state" class="value">NOT TESTED</span>
+                        </div>
+                    </div>
+
+                    <h2>Communication Log</h2>
+                    <div class="log-container">
+                        <ul id="log-list">
+                            <!-- Logs injected here -->
+                        </ul>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Tag Tables Tab -->
+            <div id="tab-tags" class="tab-content">
+                <section class="panel sidebar" id="table-sidebar">
+                    <div class="sidebar-header">
+                        <h2>Tables</h2>
+                        <button id="btn-new-table-sidebar" class="btn secondary btn-small">+</button>
+                    </div>
+                    <ul id="table-list" class="sidebar-list">
+                        <!-- Table list injected here -->
+                    </ul>
+                </section>
+                
+                <section class="panel tags-main">
+                    <div class="panel-header">
+                        <h2>Tag Tables</h2>
+                        <div class="table-controls">
+                            <select id="tag-table-select">
+                                <option value="">Select a Table...</option>
+                            </select>
+                            <button id="btn-new-table" class="btn secondary">New Table</button>
+                            <button id="btn-delete-table" class="btn danger" disabled>Delete</button>
+                            <button id="btn-toggle-poll" class="btn primary" disabled>Start Monitoring</button>
+                        </div>
+                    </div>
+                    
+                    <div class="tags-container">
+                        <div class="tags-header">
+                            <h3>Tags</h3>
+                            <button id="btn-add-tag" class="btn secondary" disabled>Add Tag</button>
+                        </div>
+                        
+                        <div id="read-diagnostics" style="margin-bottom: 10px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 4px; font-size: 0.9em;">
+                            <!-- Diagnostics loaded via JS -->
+                        </div>
+                        
+                        <table class="tags-table" id="tags-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Address</th>
+                                    <th>Data Type</th>
+                                    <th>Access</th>
+                                    <th>Value</th>
+                                    <th>Quality</th>
+                                    <th>Latency</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tags-tbody">
+                                <tr><td colspan="8" class="text-center">Select or create a table to view tags</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="modal-table" class="modal">
+        <div class="modal-content">
+            <h3>New Tag Table</h3>
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" id="modal-table-name">
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <input type="text" id="modal-table-desc">
+            </div>
+            <div class="modal-actions">
+                <button id="btn-save-table" class="btn primary">Save</button>
+                <button class="btn secondary btn-close-modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-tag" class="modal">
+        <div class="modal-content">
+            <h3 id="modal-tag-title">Add Tag</h3>
+            <input type="hidden" id="modal-tag-id">
+            
+            <div class="form-group">
+                <label>Tag Name</label>
+                <input type="text" id="modal-tag-name">
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group half">
+                    <label>Memory Area</label>
+                    <select id="modal-tag-area">
+                        <option value="M">Memory (M)</option>
+                        <option value="I">Input (I)</option>
+                        <option value="Q">Output (Q)</option>
+                        <option value="DB">Data Block (DB)</option>
+                    </select>
+                </div>
+                <div class="form-group half" id="group-db-number" style="display:none;">
+                    <label>DB Number</label>
+                    <input type="number" id="modal-tag-db-number" min="1" value="1">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group half">
+                    <label>Data Type</label>
+                    <select id="modal-tag-type">
+                        <option value="BOOL">BOOL</option>
+                        <option value="BYTE">BYTE</option>
+                        <option value="SINT">SINT</option>
+                        <option value="USINT">USINT</option>
+                        <option value="INT">INT</option>
+                        <option value="UINT">UINT</option>
+                        <option value="WORD">WORD</option>
+                        <option value="DINT">DINT</option>
+                        <option value="UDINT">UDINT</option>
+                        <option value="DWORD">DWORD</option>
+                        <option value="REAL">REAL</option>
+                    </select>
+                </div>
+                <div class="form-group half">
+                    <label>Address (e.g. 0.0 or 10)</label>
+                    <input type="text" id="modal-tag-address">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group half">
+                    <label>Access</label>
+                    <select id="modal-tag-access">
+                        <option value="Read/Write">Read/Write</option>
+                        <option value="Read Only">Read Only</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button id="btn-save-tag" class="btn primary">Save Tag</button>
+                <button class="btn secondary btn-close-modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-write" class="modal">
+        <div class="modal-content">
+            <h3>Write Value</h3>
+            <p id="write-tag-info"></p>
+            <input type="hidden" id="write-tag-id">
+            <input type="hidden" id="write-tag-area">
+            
+            <div class="form-group">
+                <label>New Value</label>
+                <input type="text" id="write-tag-value">
+            </div>
+            
+            <p class="warning-text" id="write-warning" style="display:none; color: #e74c3c;">
+                WARNING: Writing to Output (Q) memory can directly affect physical equipment. Confirm before proceeding.
+            </p>
+            
+            <div class="modal-actions">
+                <button id="btn-execute-write" class="btn danger">Write</button>
+                <button class="btn secondary btn-close-modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
